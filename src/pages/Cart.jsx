@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { AuthContext } from '../contexts/AuthContext';
+import { cartAPI } from '../services/api';
+import { CartContext } from '../contexts/CartContext';
 
 const Cart = () => {
-  const [cartItems, setCartItems] = useState([]);
+  const { cartItems, updateCartItem, clearCart } = useContext(CartContext);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { isAuthenticated } = useContext(AuthContext);
@@ -18,12 +19,11 @@ const Cart = () => {
 
     const fetchCart = async () => {
       try {
-        const response = await axios.get('/api/cart', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-        });
-        setCartItems(response.data);
+        const response = await cartAPI.get();
+        console.log('Cart response:', response);
         setLoading(false);
       } catch (error) {
+        console.error('Cart fetch error:', error);
         setError('Failed to fetch cart. Please try again.');
         setLoading(false);
       }
@@ -34,34 +34,16 @@ const Cart = () => {
 
   const handleUpdateQuantity = async (itemId, newQuantity) => {
     try {
-      await axios.put(`/api/cart/${itemId}`, { quantity: newQuantity }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
-      setCartItems(cartItems.map(item => 
-        item.id === itemId ? { ...item, quantity: newQuantity } : item
-      ));
+      await updateCartItem(itemId, newQuantity);
     } catch (error) {
       setError('Failed to update quantity. Please try again.');
     }
   };
 
-  const handleRemoveItem = async (itemId) => {
-    try {
-      await axios.delete(`/api/cart/${itemId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
-      setCartItems(cartItems.filter(item => item.id !== itemId));
-    } catch (error) {
-      setError('Failed to remove item. Please try again.');
-    }
-  };
-
   const handlePlaceOrder = async () => {
     try {
-      await axios.post('/api/orders', {}, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
-      setCartItems([]);
+      await cartAPI.placeOrder();
+      clearCart();
       navigate('/orders');
     } catch (error) {
       setError('Failed to place order. Please try again.');
@@ -76,39 +58,41 @@ const Cart = () => {
     return <div className="text-center text-red-500">{error}</div>;
   }
 
-  const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const total = cartItems?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0;
 
   return (
-    <div>
+    <div className="container mx-auto px-4 py-8">
       <h2 className="text-2xl font-bold mb-4">Your Cart</h2>
-      {cartItems.length === 0 ? (
+      {!cartItems?.length ? (
         <p>Your cart is empty.</p>
       ) : (
         <>
           <div className="space-y-4">
             {cartItems.map((item) => (
-              <div key={item.id} className="flex items-center justify-between bg-white p-4 rounded-lg shadow">
+              <div key={item.itemId} className="flex items-center justify-between bg-white p-4 rounded-lg shadow">
                 <div>
                   <h3 className="text-lg font-semibold">{item.name}</h3>
-                  <p className="text-gray-600">${item.price.toFixed(2)} x {item.quantity}</p>
+                  <p className="text-gray-600">${item.price?.toFixed(2)}</p>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handleUpdateQuantity(item.itemId, item.quantity - 1)}
+                      className="bg-gray-200 text-gray-800 px-3 py-1 rounded hover:bg-gray-300"
+                      disabled={item.quantity <= 1}
+                    >
+                      -
+                    </button>
+                    <span className="w-8 text-center">{item.quantity}</span>
+                    <button
+                      onClick={() => handleUpdateQuantity(item.itemId, item.quantity + 1)}
+                      className="bg-gray-200 text-gray-800 px-3 py-1 rounded hover:bg-gray-300"
+                    >
+                      +
+                    </button>
+                  </div>
                   <button
-                    onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
-                    className="bg-gray-200 text-gray-800 px-2 py-1 rounded"
-                    disabled={item.quantity <= 1}
-                  >
-                    -
-                  </button>
-                  <span>{item.quantity}</span>
-                  <button
-                    onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-                    className="bg-gray-200 text-gray-800 px-2 py-1 rounded"
-                  >
-                    +
-                  </button>
-                  <button
-                    onClick={() => handleRemoveItem(item.id)}
+                    onClick={() => handleUpdateQuantity(item.itemId, 0)}
                     className="text-red-500 hover:text-red-700"
                   >
                     Remove
@@ -117,11 +101,14 @@ const Cart = () => {
               </div>
             ))}
           </div>
-          <div className="mt-8">
-            <p className="text-xl font-bold">Total: ${total.toFixed(2)}</p>
+          <div className="mt-8 bg-white p-4 rounded-lg shadow">
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-xl font-bold">Total:</span>
+              <span className="text-xl">${total.toFixed(2)}</span>
+            </div>
             <button
               onClick={handlePlaceOrder}
-              className="mt-4 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors"
             >
               Place Order
             </button>

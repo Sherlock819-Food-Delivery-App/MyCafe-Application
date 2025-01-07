@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { authAPI } from '../services/api';
 
 export const AuthContext = createContext();
@@ -8,11 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    validateToken();
-  }, []);
-
-  const validateToken = async () => {
+  const validateToken = useCallback(async () => {
     const token = localStorage.getItem('token');
     console.log('Validating token:', token);
 
@@ -32,11 +28,19 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    validateToken();
+  }, [validateToken]);
 
   const login = async (token) => {
     console.log('Login with token:', token);
     localStorage.setItem('token', token);
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(window.atob(base64));
+    localStorage.setItem('userEmail', payload.sub);
     setIsAuthenticated(true);
     try {
       const response = await authAPI.validateToken();
@@ -51,6 +55,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     console.log('Logging out');
     localStorage.removeItem('token');
+    localStorage.removeItem('userEmail');
     setIsAuthenticated(false);
     setUser(null);
   };

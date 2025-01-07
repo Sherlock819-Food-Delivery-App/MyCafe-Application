@@ -3,7 +3,7 @@ import { AuthContext } from '../contexts/AuthContext';
 import { authAPI } from '../services/api';
 
 const Profile = () => {
-  const { user, login } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -33,7 +33,7 @@ const Profile = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await authAPI.updateProfile(formData);
+      await authAPI.updateProfile(formData);
       setSuccess('Profile updated successfully');
       setError('');
     } catch (error) {

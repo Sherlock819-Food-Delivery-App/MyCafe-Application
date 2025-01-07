@@ -52,9 +52,17 @@ export const restaurantAPI = {
 export const cartAPI = {
   get: () => user_api.get('order/api/cart'),
   addItem: (data) => user_api.post('order/api/cart/items', data),
-  updateItem: (itemId, quantity) => user_api.put(`/cart/${itemId}`, { quantity }),
-  removeItem: (itemId) => user_api.delete(`/cart/${itemId}`),
-  placeOrder: () => user_api.post('/orders')
+  updateItem: (itemId, quantity) => user_api.put(`order/api/cart/items/${itemId}`, { quantity }),
+  removeItem: (itemId) => user_api.delete(`order/api/cart/items/${itemId}`),
+  placeOrder: () => user_api.post('order/api/orders')
+};
+
+export const orderAPI = {
+  get: () => user_api.get('order/api/orders'),
+  placeOrder: () => user_api.post('order/api/orders'),
+  getOrderUpdates: () => `${API_BASE_URL}/order/api/order-events/subscribe`,
+  subscribePushNotification: (subscription) => 
+    user_api.post('order/api/push/subscribe', subscription)
 };
 
 export default user_api; 
