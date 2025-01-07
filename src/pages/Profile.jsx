@@ -37,7 +37,7 @@ const Profile = () => {
       setSuccess('Profile updated successfully');
       setError('');
     } catch (error) {
-      setError('Failed to update profile. Please try again.');
+      setError(`Failed to update profile: ${error.response?.data?.message || 'An unknown error occurred.'}`);
       setSuccess('');
     }
   };
