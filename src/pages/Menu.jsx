@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 import { restaurantAPI } from '../services/api';
 import { CartContext } from '../contexts/CartContext';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const Menu = () => {
   const { restaurantId } = useParams();
@@ -12,7 +13,15 @@ const Menu = () => {
   const [error, setError] = useState('');
   const { isAuthenticated } = useContext(AuthContext);
   const [expandedCategories, setExpandedCategories] = useState({});
-  const { cartItems, addToCart, updateCartItem } = useContext(CartContext);
+  const [showClearCartModal, setShowClearCartModal] = useState(false);
+  const [pendingItem, setPendingItem] = useState(null);
+  const { 
+    cartItems, 
+    addToCart, 
+    updateCartItem, 
+    currentRestaurantId,
+    clearCart 
+  } = useContext(CartContext);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -60,16 +69,29 @@ const Menu = () => {
     if (!isAuthenticated) {
       return;
     }
-    try {
-      await addToCart({
-        restaurantId,
-        itemId: menuItem.id,
-        name: menuItem.name,
-        price: menuItem.price,
-        quantity: 1,
-      });
-    } catch (error) {
-      setError('Failed to add item to cart');
+    
+    console.log('Current res : ', currentRestaurantId, '  New rest ID : ',restaurantId);
+    
+    // Force currentRestaurantId and restaurantId to be numbers for comparison
+    const currentResId = Number(currentRestaurantId);
+    const newResId = Number(restaurantId);
+    
+    if (!currentResId || currentResId === newResId) {
+      try {
+        await addToCart({
+          restaurantId: newResId,
+          itemId: menuItem.id,
+          name: menuItem.name,
+          price: menuItem.price,
+          quantity: 1,
+        });
+      } catch (error) {
+        setError('Failed to add item to cart');
+      }
+    } else {
+      console.log('Different restaurant detected. Current:', currentResId, 'New:', newResId);
+      setPendingItem(menuItem);
+      setShowClearCartModal(true);
     }
   };
 
@@ -78,6 +100,28 @@ const Menu = () => {
       await updateCartItem(itemId, newQuantity);
     } catch (error) {
       setError('Failed to update cart');
+    }
+  };
+
+  const handleConfirmClearCart = async () => {
+    try {
+      await clearCart();
+      // Add a small delay to ensure cart is cleared before adding new item
+      await new Promise(resolve => setTimeout(resolve, 100));
+      if (pendingItem) {
+        await addToCart({
+          restaurantId: Number(restaurantId),
+          itemId: pendingItem.id,
+          name: pendingItem.name,
+          price: pendingItem.price,
+          quantity: 1,
+        });
+      }
+    } catch (error) {
+      setError('Failed to update cart');
+    } finally {
+      setShowClearCartModal(false);
+      setPendingItem(null);
     }
   };
 
@@ -91,6 +135,15 @@ const Menu = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <ConfirmationModal
+        isOpen={showClearCartModal}
+        message="Adding items from a different restaurant will clear your current cart. Do you want to continue?"
+        onConfirm={handleConfirmClearCart}
+        onCancel={() => {
+          setShowClearCartModal(false);
+          setPendingItem(null);
+        }}
+      />
       {restaurant && (
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-2">{restaurant.name}</h2>

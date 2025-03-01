@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { API_BASE_URL, RESTAURANT_API_BASE_URL } from '../config/config';
+import { JWT_TOKEN } from '../constants/constants';
 
 console.log('API_BASE_URL:', API_BASE_URL);
 
@@ -28,7 +29,7 @@ user_api.interceptors.request.use((config) => {
 
 // Add auth token to requests
 user_api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem(JWT_TOKEN);
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -51,9 +52,10 @@ export const restaurantAPI = {
 
 export const cartAPI = {
   get: () => user_api.get('order/api/cart'),
-  addItem: (data) => user_api.post('order/api/cart/items', data),
-  updateItem: (itemId, quantity) => user_api.put(`order/api/cart/items/${itemId}`, { quantity }),
-  removeItem: (itemId) => user_api.delete(`order/api/cart/items/${itemId}`),
+  addItem: (data) => user_api.post('order/api/cart/item', data),
+  updateItem: (itemId, quantity) => user_api.put(`order/api/cart/item`, { "itemId": itemId, "quantity": quantity }),
+  removeItem: (itemId) => user_api.delete(`order/api/cart/item/${itemId}`),
+  clearCart: () => user_api.delete('order/api/cart'),
   placeOrder: () => user_api.post('order/api/orders')
 };
 

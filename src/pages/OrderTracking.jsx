@@ -2,6 +2,7 @@ import React, { useEffect, useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 import { orderAPI } from '../services/api';
+import { JWT_TOKEN } from '../constants/constants';
 
 const OrderTracking = () => {
   const [orders, setOrders] = useState({});
@@ -21,7 +22,7 @@ const OrderTracking = () => {
     const RETRY_DELAY = 2000;
 
     const setupSSE = () => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem(JWT_TOKEN);
 
       if (!token) {
         console.error('Missing token');

@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { authAPI } from '../services/api';
+import { JWT_TOKEN } from '../constants/constants';
 
 export const AuthContext = createContext();
 
@@ -9,7 +10,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const validateToken = useCallback(async () => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem(JWT_TOKEN);
     console.log('Validating token:', token);
 
     if (!token) {
@@ -36,7 +37,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (token) => {
     console.log('Login with token:', token);
-    localStorage.setItem('token', token);
+    localStorage.setItem(JWT_TOKEN, token);
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
     const payload = JSON.parse(window.atob(base64));
@@ -54,7 +55,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     console.log('Logging out');
-    localStorage.removeItem('token');
+    localStorage.removeItem(JWT_TOKEN);
     localStorage.removeItem('userEmail');
     setIsAuthenticated(false);
     setUser(null);

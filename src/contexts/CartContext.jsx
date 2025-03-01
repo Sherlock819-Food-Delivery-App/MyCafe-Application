@@ -7,12 +7,18 @@ export const CartContext = createContext();
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentRestaurantId, setCurrentRestaurantId] = useState(null);
   const { isAuthenticated } = useContext(AuthContext);
 
   const fetchCart = async () => {
     try {
       const response = await cartAPI.get();
       setCartItems(response.data?.cartItems || []);
+      if (response.data?.cartItems?.length > 0) {
+        setCurrentRestaurantId(response.data.restaurantId);
+      } else {
+        setCurrentRestaurantId(null);
+      }
     } catch (error) {
       console.error('Error fetching cart:', error);
     } finally {
@@ -31,8 +37,12 @@ export const CartProvider = ({ children }) => {
 
   const addToCart = async (item) => {
     try {
-      await cartAPI.addItem(item);
-      setCartItems(prev => [...prev, { ...item, itemId: item.itemId }]);
+      const cartData = await cartAPI.addItem(item);
+      console.log("Added cart data : ", cartData.data)
+      if (cartData.data) {
+        setCartItems(cartData.data.cartItems || []);
+        setCurrentRestaurantId(cartData.data.restaurantId);
+      }
     } catch (error) {
       console.error('Error adding to cart:', error);
       throw error;
@@ -43,14 +53,16 @@ export const CartProvider = ({ children }) => {
     try {
       if (newQuantity === 0) {
         await cartAPI.removeItem(itemId);
-        setCartItems(prev => prev.filter(item => item.itemId !== itemId));
+        const updatedCart = await cartAPI.get();
+        setCartItems(updatedCart.data?.cartItems || []);
+        setCurrentRestaurantId(updatedCart.data?.restaurantId || null);
       } else {
-        await cartAPI.updateItem(itemId, newQuantity);
-        setCartItems(prev => 
-          prev.map(item => 
-            item.itemId === itemId ? { ...item, quantity: newQuantity } : item
-          )
-        );
+        const cartData = await cartAPI.updateItem(itemId, newQuantity);
+        console.log("Updated cart data : ", cartData.data)
+        if (cartData.data) {
+          setCartItems(cartData.data.cartItems || []);
+          setCurrentRestaurantId(cartData.data.restaurantId);
+        }
       }
     } catch (error) {
       console.error('Error updating cart:', error);
@@ -58,8 +70,15 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  const clearCart = () => {
-    setCartItems([]);
+  const clearCart = async () => {
+    try {
+      await cartAPI.clearCart();
+      setCartItems([]);
+      setCurrentRestaurantId(null);
+    } catch (error) {
+      console.error('Error clearing cart:', error);
+      throw error;
+    }
   };
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -72,7 +91,8 @@ export const CartProvider = ({ children }) => {
       addToCart, 
       updateCartItem,
       clearCart,
-      refreshCart: fetchCart
+      refreshCart: fetchCart,
+      currentRestaurantId
     }}>
       {children}
     </CartContext.Provider>
